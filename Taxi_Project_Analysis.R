@@ -6,15 +6,13 @@ install.packages("data.table")
 install.packages("lubridate")
 install.packages("dyplr")
 install.packages("gplots")
-install.packages("repr")
 library(data.table) #Package for large data processing
-library(xda)#Package for exploratory analysis
+library(xda) #Package for exploratory analysis
 library(dplyr) #R grammar
 library(lubridate) #Handling dates
 library(ggplot2) #Data viz
 library(gplots) #Data viz
-library(repr)
-library(reshape2)
+library(reshape2) #Mostly for melt function
 
 
 ################
@@ -28,9 +26,7 @@ taxiDT = fread("small_taxi_data.csv")
 #OPTIONAL - Investigate dimensions and column names of data
 dim(taxiDT)
 colnames(taxiDT)
-head(taxiDT,20)
-typeof(taxiDT$lpep_pickup_datetime)
-length(unique(taxiDT$DOLocationID)) #There are 259 PUids... 264 DO... maybe diff ways to get into NYC
+head(taxiDT,10)
 
 ###########################
 # STEP 1: MERGE DATASETS
@@ -58,7 +54,7 @@ taxiDT=merge2Data
 #PART A -- LOOK INTO ROWS WITH INVALID VALUES (e.g. negatives, )
 #Investigate Tip_amount broken up by a variable --> By Payment_type shows we must only look @ credit card data
 taxiDT[, list(min=min(Tip_amount), mean=round(mean(Extra),3), max=max(Tip_amount)), 
-        by=list(PUborough)]
+       by=list(PUborough)]
 
 #Look at # of tip values below $0.00 --> 16 below 0
 sum(taxiDT$Tip_amount < 0)
@@ -152,16 +148,16 @@ dayRiders
 
 #Re-order by calendar order
 dayRiders$weekday = ordered(dayRiders$weekday, levels =  c("Sunday", "Monday", "Tuesday",
-                                "Wednesday", "Thursday", "Friday",
-                                "Saturday"))
+                                                           "Wednesday", "Thursday", "Friday",
+                                                           "Saturday"))
 dayRiders
 
 #Make the line plot
 ggplot(data = dayRiders[order(dayRiders$weekday)], aes(weekday, 
                                                        (dayRiders$n/dayRiders$V1),group=1)) + 
-      geom_point() +
-      geom_line() + 
-      labs(x="Day of the Week", y="Avg # Riders", title = "Avg # Riders per Day")
+  geom_point() +
+  geom_line() + 
+  labs(x="Day of the Week", y="Avg # Riders", title = "Avg # Riders per Day")
 
 
 #####
@@ -169,23 +165,23 @@ ggplot(data = dayRiders[order(dayRiders$weekday)], aes(weekday,
 #Categorize passenger counts into group types
 taxiDT$passCount = ifelse(taxiDT$Passenger_count ==0, "No one", 
                           ifelse(taxiDT$Passenger_count == 1, "Alone",
-                          ifelse(taxiDT$Passenger_count == 2, "Pair", 
-                          ifelse(taxiDT$Passenger_count > 2, "Group", taxiDT$Passenger_count))))
+                                 ifelse(taxiDT$Passenger_count == 2, "Pair", 
+                                        ifelse(taxiDT$Passenger_count > 2, "Group", taxiDT$Passenger_count))))
 
 # Make smaller dataframe with just proportions of passenger group types
 numPas = taxiDT %>% group_by(passCount) %>% count() 
 passGroupType = transform(numPas, propPass = n/sum(n))
 
-passGroupType$label = paste(pasTrans$passCount, 
-                            paste(round(pasTrans$propPass*100, 2), "%"), sep = " - ")
+passGroupType$label = paste(passGroupType$passCount, 
+                            paste(round(passGroupType$propPass*100, 2), "%"), sep = " - ")
 
 # Draw pie chart of passenger group types
 ggplot(data=passGroupType, mapping = aes(x="", y= propPass, fill = passCount)) + 
-        geom_bar(width=1, stat="identity", show.legend = FALSE) +
-        coord_polar(theta = "y") +
-        labs(title = "Passenger Count Breakdown") +
-        geom_text(aes(label = label),
-                  position = position_stack(vjust=0.5),size=3.5, angle=30) 
+  geom_bar(width=1, stat="identity", show.legend = FALSE) +
+  coord_polar(theta = "y") +
+  labs(title = "Passenger Count Breakdown") +
+  geom_text(aes(label = label),
+            position = position_stack(vjust=0.5),size=3.5, angle=30) 
 
 mean(taxiDT$Fare_amount)/mean(taxiDT$Trip_distance)
 
@@ -193,11 +189,11 @@ mean(taxiDT$Fare_amount)/mean(taxiDT$Trip_distance)
 #####
 #CHART 3 -- TRIP DISTANCE histogram
 qplot(taxiDT[Trip_distance < 20]$Trip_distance, geom="histogram", binwidth = 2) +  
-      xlab("Distance") + 
-      ggtitle("Distance Travelled Distribution") +
-      geom_vline(aes(xintercept = median(taxiDT$Trip_distance)), color = "olivedrab2") 
-      #geom_vline(aes(xintercept = mean(taxiDT$Trip_distance)), color = "red")
-    
+  xlab("Distance") + 
+  ggtitle("Distance Travelled Distribution") +
+  geom_vline(aes(xintercept = median(taxiDT$Trip_distance)), color = "olivedrab2") 
+#geom_vline(aes(xintercept = mean(taxiDT$Trip_distance)), color = "red")
+
 
 #####
 #CHART 4 -- NON-TIP AMOUNT histogram
@@ -205,7 +201,7 @@ qplot(taxiDT[nonTip < 100]$nonTip, geom="histogram",breaks = seq(0, 100, 5)) +
   xlab("Amount ($)") + 
   ggtitle("Amount of Non-Tip Paid Distribution") +
   geom_vline(aes(xintercept = median(taxiDT$nonTip)), color = "olivedrab2")  
-  #geom_vline(aes(xintercept = mean(taxiDT$nonTip)), color = "red")
+#geom_vline(aes(xintercept = mean(taxiDT$nonTip)), color = "red")
 
 
 #####
@@ -221,27 +217,26 @@ nrow(taxiDT[taxiDT$Trip_distance > 50])
 
 ###### 
 #CHART 6 -- CORRELATION PLOT
-options(repr.plot.width=8, repr.plot.height=6)
 quantData = taxiDT[, list(Passenger_count, Trip_distance, Fare_amount, 
-              Extra,MTA_tax, Tip_amount, Tolls_amount, 
-              improvement_surcharge, Total_amount, tip_percent, nonTip)]
+                          Extra,MTA_tax, Tip_amount, Tolls_amount, 
+                          improvement_surcharge, Total_amount, tip_percent, nonTip)]
 str(quantData)
 head(quantData, 20)
 
 qplot(x=Var1, y=Var2, data=melt(cor(quantData, use='p')), fill=value, geom='tile') +
-      scale_fill_gradient2(low='red', high='blue', mid = 'white', midpoint = 0, 
-                           limit=c(-1,1), space='Lab', name='Correlation') + 
-      theme(axis.text.x = element_text(angle=45, vjust=1, size=8, hjust = 1)) +
-      coord_fixed() + ggtitle("Correlation Heatmap") + 
-      theme(plot.title = element_text(hjust = 0.4)) +
-      geom_text(aes(Var1, Var2, label=round(value,2)), color="black", size = 2)
+  scale_fill_gradient2(low='red', high='blue', mid = 'white', midpoint = 0, 
+                       limit=c(-1,1), space='Lab', name='Correlation') + 
+  theme(axis.text.x = element_text(angle=45, vjust=1, size=8, hjust = 1)) +
+  coord_fixed() + ggtitle("Correlation Heatmap") + 
+  theme(plot.title = element_text(hjust = 0.4)) +
+  geom_text(aes(Var1, Var2, label=round(value,2)), color="black", size = 2)
 
 
 #####
 #CHART 7 -- Weekday x Hour tile chart
 TP_time = taxiDT %>% group_by(weekday, PUhour) %>% 
-          summarize(Tip_Percent = mean(tip_percent)) %>%
-          mutate(Morning = substr(PUhour, 4, 5)) 
+  summarize(Tip_Percent = mean(tip_percent)) %>%
+  mutate(Morning = substr(PUhour, 4, 5)) 
 
 TP_time= TP_time[order(TP_time$Morning),]
 
@@ -250,16 +245,18 @@ colnames(TP_time)
 
 
 ggplot(TP_time, aes(x=ordered(weekday, levels = c("Sunday", 
-                                        "Monday", "Tuesday","Wednesday", "Thursday", 
-                                        "Friday", "Saturday")), 
-                                        y=ordered(PUhour, levels = c("12 AM", "01 AM", "02 AM",
-                                        "03 AM", "04 AM", "05 AM", "06 AM", "07 AM", "08 AM", 
-                                        "09 AM", "10 AM", "11 AM", "12 PM", "01 PM", "02 PM",
-                                        "03 PM", "04 PM", "05 PM", "06 PM", "07 PM", 
-                                        "08 PM", "09 PM", "10 PM", "11 PM")))) +
-        geom_tile(aes(fill = Tip_Percent), color = "white") + 
-        scale_fill_gradient(low = "white", high = 'darkgreen') + 
-        xlab("Day of Week") + ylab("Hour of Day") + ggtitle("Tip Percent by Hour of Day Heatmap")
+                                                  "Monday", "Tuesday","Wednesday", "Thursday", 
+                                                  "Friday", "Saturday")), 
+                    y=ordered(PUhour, levels = c("12 AM", "01 AM", "02 AM",
+                                                 "03 AM", "04 AM", "05 AM", "06 AM", "07 AM", "08 AM", 
+                                                 "09 AM", "10 AM", "11 AM", "12 PM", "01 PM", "02 PM",
+                                                 "03 PM", "04 PM", "05 PM", "06 PM", "07 PM", 
+                                                 "08 PM", "09 PM", "10 PM", "11 PM")))) +
+  geom_tile(aes(fill = Tip_Percent), color = "white") + 
+  scale_fill_gradient(low = "white", high = 'darkgreen') + 
+  xlab("Day of Week") + ylab("Hour of Day") + ggtitle("Tip Percent by Hour of Day Heatmap")
+
+
 
 
 
